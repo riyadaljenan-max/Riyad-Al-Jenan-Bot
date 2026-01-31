@@ -27,8 +27,8 @@ def format_list(items):
 def get_group(chat_id):
     if chat_id not in groups:
         groups[chat_id] = {
-            "participants": [],
-            "listeners": [],
+            "participants": [],  # قائمة المشاركات
+            "listeners": [],     # قائمة المستمعات
             "active": False,
             "message_id": None
         }
@@ -66,7 +66,7 @@ def build_keyboard():
         ],
         [
             InlineKeyboardButton("⛔️ إيقاف الإعلان", callback_data="stop"),
-            InlineKeyboardButton("📢 تاغ المجموعة", callback_data="tag_all"),
+            InlineKeyboardButton("🔔 بدأت الحلقة!", callback_data="tag_all"),
         ]
     ])
 
@@ -153,26 +153,35 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user in group["listeners"]:
             group["listeners"].remove(user)
 
-    # تاغ جميع أعضاء المجموعة (للمشرفين فقط)
+    # زر "🔔 بدأت الحلقة!"
     elif query.data == "tag_all":
         if not await is_admin(update, context):
             await query.answer("❌ للمشرفين فقط", show_alert=True)
             return
 
-        msg = await context.bot.send_message(
-            chat_id=chat_id,
-            text="📢 @everyone جميع أعضاء المجموعة!",  # يمكنك تعديل النص حسب الحاجة
-        )
-        await query.answer("✅ تم تاغ جميع أعضاء المجموعة مؤقتًا", show_alert=True)
+        if group["participants"] or group["listeners"]:
+            mentions = []
+            # منشن المشاركات
+            for participant in group["participants"]:
+                mentions.append(f"[{participant}](tg://user?id={query.from_user.id})")  # يمكن تعديل id لاحقًا لكل طالبة
+            # منشن المستمعات
+            for listener in group["listeners"]:
+                mentions.append(f"[{listener}](tg://user?id={query.from_user.id})")
+            
+            text = "🔔 بدأت الحلقة!\n\n" + " ".join(mentions)
+            msg = await context.bot.send_message(chat_id, text, parse_mode="Markdown")
+            await query.answer("✅ تم تاغ الطالبات المسجلات مؤقتًا", show_alert=True)
 
-        # حذف الرسالة بعد 20 دقيقة
-        await asyncio.sleep(1200)
-        try:
-            await context.bot.delete_message(chat_id, msg.message_id)
-        except:
-            pass
+            # حذف الرسالة بعد 10 دقائق = 600 ثانية
+            await asyncio.sleep(600)
+            try:
+                await context.bot.delete_message(chat_id, msg.message_id)
+            except:
+                pass
+        else:
+            await query.answer("لا يوجد مسجلون للتاغ", show_alert=True)
 
-    # تحديث الرسالة الرئيسية بعد أي تغيير
+    # تحديث الرسالة الرئيسية
     await query.edit_message_text(
         build_text(group),
         reply_markup=build_keyboard(),

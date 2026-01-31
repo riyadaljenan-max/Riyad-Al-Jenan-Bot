@@ -56,7 +56,7 @@ def build_text(group):
     text += "\n\n⬇️ الرجاء اختيار حالتك من الأسفل"
     return text
 
-# ✅ لوحة الأزرار بعد التعديل
+# لوحة الأزرار
 def build_keyboard():
     return InlineKeyboardMarkup([
         [
@@ -73,7 +73,7 @@ def build_keyboard():
         ]
     ])
 
-# أمر /start
+# أمر /start (❗ لا يحذف الأسماء)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await update.message.delete()
@@ -90,16 +90,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     group = get_group(chat_id)
 
-    group["participants"].clear()
-    group["listeners"].clear()
+    # فقط تفعيل الإعلان
     group["active"] = True
 
+    # حذف الرسالة القديمة فقط
     if group["message_id"]:
         try:
             await context.bot.delete_message(chat_id, group["message_id"])
         except:
             pass
 
+    # إعادة إرسال الإعلان بنفس القوائم
     msg = await context.bot.send_message(
         chat_id=chat_id,
         text=build_text(group),
@@ -121,13 +122,19 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer("⛔️ التسجيل مغلق", show_alert=True)
         return
 
-    # إيقاف الإعلان
+    # ⛔️ إيقاف الإعلان (هنا فقط نحذف القوائم)
     if query.data == "stop":
         if not await is_admin(update, context):
             await query.answer("❌ للمشرفين فقط", show_alert=True)
             return
+
         group["active"] = False
+        group["participants"].clear()
+        group["listeners"].clear()
+        group["message_id"] = None
+
         await query.edit_message_reply_markup(None)
+        await query.answer("✅ تم إنهاء الإعلان وفتح قائمة جديدة", show_alert=True)
         return
 
     # مشاركة
@@ -147,7 +154,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         group["participants"] = [p for p in group["participants"] if p["name"] != user_name]
         group["listeners"] = [l for l in group["listeners"] if l["name"] != user_name]
 
-    # ✅ زر قرأت
+    # زر قرأت
     elif query.data == "read":
         for p in group["participants"]:
             if p["name"] == user_name:

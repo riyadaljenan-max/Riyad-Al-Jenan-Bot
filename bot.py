@@ -19,20 +19,20 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def rtl(text: str) -> str:
     return "\u200f" + text
 
-# تنسيق قائمة الأسماء مع إظهار ✅ عند قراءة الطالبة
+# تنسيق قائمة الأسماء مع علامة ✅
 def format_list(items):
-    formatted = []
-    for i, info in enumerate(items, start=1):
-        name = info["name"]
-        mark = " ✅" if info.get("read") else ""
-        formatted.append(f"{i}. {rtl(name)}{mark}")
-    return "\n".join(formatted)
+    lines = []
+    for i, item in enumerate(items, start=1):
+        name = item["name"]
+        mark = " ✅" if item.get("read") else ""
+        lines.append(f"{i}. {rtl(name)}{mark}")
+    return "\n".join(lines)
 
 # إنشاء أو استدعاء بيانات المجموعة
 def get_group(chat_id):
     if chat_id not in groups:
         groups[chat_id] = {
-            "participants": [],  # [{"name": "...", "read": True/False}]
+            "participants": [],
             "listeners": [],
             "active": False,
             "message_id": None
@@ -42,22 +42,21 @@ def get_group(chat_id):
 # بناء نص الرسالة
 def build_text(group):
     text = (
-        "\u200f" + "               📖🌿 أكاديمية رياض الجنان 🌿📖\n\n"
+        "\u200f"
+        "               📖🌿 أكاديمية رياض الجنان 🌿📖\n\n"
+        "        🌼🌿 اللهم اجعل القرآن ربيع قلوبنا 🌼🌿\n\n"
     )
+
     text += "*👥 المشاركات:*\n"
     text += format_list(group["participants"]) if group["participants"] else "لا يوجد مسجلات بعد"
 
     text += "\n\n*🎧 المستمعات:*\n"
     text += format_list(group["listeners"]) if group["listeners"] else "لا يوجد مستمعات بعد"
 
-    text += (
-        "\n\n*📖 القرآن شفاء للقلوب ونور للحياة*\n"
-        "جددي نيتك وابدئي، والله ييسّر 🤲🌸\n\n"
-        "⬇️ الرجاء اختيار حالتك من الأسفل"
-    )
+    text += "\n\n⬇️ الرجاء اختيار حالتك من الأسفل"
     return text
 
-# بناء لوحة الأزرار
+# ✅ لوحة الأزرار بعد التعديل
 def build_keyboard():
     return InlineKeyboardMarkup([
         [
@@ -66,9 +65,9 @@ def build_keyboard():
         ],
         [
             InlineKeyboardButton("❌ إلغاء التسجيل", callback_data="cancel"),
+            InlineKeyboardButton("📖 قرأت", callback_data="read"),
         ],
         [
-            InlineKeyboardButton("📖 قرأت", callback_data="read"),
             InlineKeyboardButton("⛔️ إيقاف الإعلان", callback_data="stop"),
             InlineKeyboardButton("🔔 بدأت الحلقة!", callback_data="tag_all"),
         ]
@@ -91,10 +90,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     group = get_group(chat_id)
 
-    if not group["active"]:
-        group["participants"].clear()
-        group["listeners"].clear()
-        group["active"] = True
+    group["participants"].clear()
+    group["listeners"].clear()
+    group["active"] = True
 
     if group["message_id"]:
         try:
@@ -119,79 +117,65 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_name = query.from_user.full_name or "غير معروف"
 
+    if not group["active"]:
+        await query.answer("⛔️ التسجيل مغلق", show_alert=True)
+        return
+
     # إيقاف الإعلان
     if query.data == "stop":
         if not await is_admin(update, context):
             await query.answer("❌ للمشرفين فقط", show_alert=True)
             return
         group["active"] = False
-        group["message_id"] = None
         await query.edit_message_reply_markup(None)
-        await query.answer("✅ تم إيقاف الإعلان", show_alert=True)
         return
 
-    # التأكد أن التسجيل مفتوح
-    if not group["active"]:
-        await query.answer("⛔️ التسجيل مغلق", show_alert=True)
-        return
-
-    # تسجيل مشاركة
+    # مشاركة
     if query.data == "join":
         if not any(p["name"] == user_name for p in group["participants"]):
             group["participants"].append({"name": user_name, "read": False})
-        # إزالة من المستمعات إذا موجودة
         group["listeners"] = [l for l in group["listeners"] if l["name"] != user_name]
 
-    # تسجيل مستمعة
+    # مستمعة
     elif query.data == "listen":
         if not any(l["name"] == user_name for l in group["listeners"]):
             group["listeners"].append({"name": user_name, "read": False})
-        # إزالة من المشاركات إذا موجودة
         group["participants"] = [p for p in group["participants"] if p["name"] != user_name]
 
-    # إلغاء التسجيل
+    # إلغاء
     elif query.data == "cancel":
         group["participants"] = [p for p in group["participants"] if p["name"] != user_name]
         group["listeners"] = [l for l in group["listeners"] if l["name"] != user_name]
 
-    # زر "قرأت" لكل طالبة
+    # ✅ زر قرأت
     elif query.data == "read":
-        # تحديث العلامة ✅ في المشاركات
         for p in group["participants"]:
             if p["name"] == user_name:
-                p["read"] = not p.get("read", False)
-        # تحديث العلامة ✅ في المستمعات
+                p["read"] = not p["read"]
         for l in group["listeners"]:
             if l["name"] == user_name:
-                l["read"] = not l.get("read", False)
+                l["read"] = not l["read"]
         await query.answer("✅ تم تحديث حالتك")
 
-    # زر بدأت الحلقة! للمشرفين فقط
+    # 🔔 بدأت الحلقة
     elif query.data == "tag_all":
         if not await is_admin(update, context):
             await query.answer("❌ للمشرفين فقط", show_alert=True)
             return
-        if group["participants"]:
-            mentions = " ".join([f"[{p['name']}](tg://user?id={query.from_user.id})" for p in group["participants"]])
-            msg = await context.bot.send_message(chat_id, f"🔔 بدأت الحلقة!\n{mentions}", parse_mode="Markdown")
-            await query.answer("✅ تم تاغ الجميع مؤقتًا", show_alert=True)
-            # حذف الرسالة بعد 10 دقائق
-            await asyncio.sleep(600)
-            try:
-                await context.bot.delete_message(chat_id, msg.message_id)
-            except:
-                pass
-        else:
-            await query.answer("لا يوجد مشاركات للتاغ", show_alert=True)
+        msg = await context.bot.send_message(chat_id, "🔔 بدأت الحلقة!")
+        await asyncio.sleep(600)
+        try:
+            await context.bot.delete_message(chat_id, msg.message_id)
+        except:
+            pass
 
-    # تحديث الرسالة الرئيسية بعد أي تغيير
     await query.edit_message_text(
         build_text(group),
         reply_markup=build_keyboard(),
         parse_mode="Markdown"
     )
 
-# التشغيل الرئيسي للبوت
+# تشغيل البوت
 def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))

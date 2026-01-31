@@ -153,25 +153,24 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if user in group["listeners"]:
             group["listeners"].remove(user)
 
-    # تاغ المجموعة مع حذف الرسالة بعد 20 دقيقة
+    # تاغ جميع أعضاء المجموعة (للمشرفين فقط)
     elif query.data == "tag_all":
         if not await is_admin(update, context):
             await query.answer("❌ للمشرفين فقط", show_alert=True)
             return
 
-        if group["participants"]:
-            mentions = " ".join([f"[{name}](tg://user?id={query.from_user.id})" for name in group["participants"]])
-            msg = await context.bot.send_message(chat_id, f"📢 تاغ للجميع:\n{mentions}", parse_mode="Markdown")
-            await query.answer("✅ تم تاغ الجميع مؤقتًا", show_alert=True)
+        msg = await context.bot.send_message(
+            chat_id=chat_id,
+            text="📢 @everyone جميع أعضاء المجموعة!",  # يمكنك تعديل النص حسب الحاجة
+        )
+        await query.answer("✅ تم تاغ جميع أعضاء المجموعة مؤقتًا", show_alert=True)
 
-            # حذف الرسالة بعد 20 دقيقة
-            await asyncio.sleep(1200)
-            try:
-                await context.bot.delete_message(chat_id, msg.message_id)
-            except:
-                pass
-        else:
-            await query.answer("لا يوجد مشاركون للتاغ", show_alert=True)
+        # حذف الرسالة بعد 20 دقيقة
+        await asyncio.sleep(1200)
+        try:
+            await context.bot.delete_message(chat_id, msg.message_id)
+        except:
+            pass
 
     # تحديث الرسالة الرئيسية بعد أي تغيير
     await query.edit_message_text(

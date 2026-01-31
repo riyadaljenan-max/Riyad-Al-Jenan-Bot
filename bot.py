@@ -19,26 +19,30 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def rtl(text: str) -> str:
     return "\u200f" + text
 
-# تنسيق قائمة الأسماء
+# تنسيق قائمة الأسماء مع إظهار ✅ عند قراءة الطالبة
 def format_list(items):
-    return "\n".join(f"{i}. {rtl(name)}" for i, name in enumerate(items, start=1))
+    formatted = []
+    for i, info in enumerate(items, start=1):
+        name = info["name"]
+        mark = " ✅" if info.get("read") else ""
+        formatted.append(f"{i}. {rtl(name)}{mark}")
+    return "\n".join(formatted)
 
 # إنشاء أو استدعاء بيانات المجموعة
 def get_group(chat_id):
     if chat_id not in groups:
         groups[chat_id] = {
-            "participants": [],
+            "participants": [],  # [{"name": "...", "read": True/False}]
             "listeners": [],
             "active": False,
             "message_id": None
         }
     return groups[chat_id]
 
-# بناء نص الرسالة مع محاذاة العناوين والعبارات الإدارية بالوسط بصريًا
+# بناء نص الرسالة
 def build_text(group):
     text = (
-        "\u200f" + "               📖🌿 أكاديمية رياض الجنان 🌿📖\n"
-        + "           📖🌿 Riyad Al-Jenan Academy 🌿📖\n\n"
+        "\u200f" + "               📖🌿 أكاديمية رياض الجنان 🌿📖\n\n"
     )
     text += "*👥 المشاركات:*\n"
     text += format_list(group["participants"]) if group["participants"] else "لا يوجد مسجلات بعد"
@@ -64,6 +68,7 @@ def build_keyboard():
             InlineKeyboardButton("❌ إلغاء التسجيل", callback_data="cancel"),
         ],
         [
+            InlineKeyboardButton("📖 قرأت", callback_data="read"),
             InlineKeyboardButton("⛔️ إيقاف الإعلان", callback_data="stop"),
             InlineKeyboardButton("🔔 بدأت الحلقة!", callback_data="tag_all"),
         ]
@@ -112,14 +117,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = query.message.chat.id
     group = get_group(chat_id)
 
-    user = query.from_user.full_name or "غير معروف"
+    user_name = query.from_user.full_name or "غير معروف"
 
     # إيقاف الإعلان
     if query.data == "stop":
         if not await is_admin(update, context):
             await query.answer("❌ للمشرفين فقط", show_alert=True)
             return
-
         group["active"] = False
         group["message_id"] = None
         await query.edit_message_reply_markup(None)
@@ -133,44 +137,52 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # تسجيل مشاركة
     if query.data == "join":
-        if user not in group["participants"]:
-            group["participants"].append(user)
-        if user in group["listeners"]:
-            group["listeners"].remove(user)
+        if not any(p["name"] == user_name for p in group["participants"]):
+            group["participants"].append({"name": user_name, "read": False})
+        # إزالة من المستمعات إذا موجودة
+        group["listeners"] = [l for l in group["listeners"] if l["name"] != user_name]
 
     # تسجيل مستمعة
     elif query.data == "listen":
-        if user not in group["listeners"]:
-            group["listeners"].append(user)
-        if user in group["participants"]:
-            group["participants"].remove(user)
+        if not any(l["name"] == user_name for l in group["listeners"]):
+            group["listeners"].append({"name": user_name, "read": False})
+        # إزالة من المشاركات إذا موجودة
+        group["participants"] = [p for p in group["participants"] if p["name"] != user_name]
 
     # إلغاء التسجيل
     elif query.data == "cancel":
-        if user in group["participants"]:
-            group["participants"].remove(user)
-        if user in group["listeners"]:
-            group["listeners"].remove(user)
+        group["participants"] = [p for p in group["participants"] if p["name"] != user_name]
+        group["listeners"] = [l for l in group["listeners"] if l["name"] != user_name]
+
+    # زر "قرأت" لكل طالبة
+    elif query.data == "read":
+        # تحديث العلامة ✅ في المشاركات
+        for p in group["participants"]:
+            if p["name"] == user_name:
+                p["read"] = not p.get("read", False)
+        # تحديث العلامة ✅ في المستمعات
+        for l in group["listeners"]:
+            if l["name"] == user_name:
+                l["read"] = not l.get("read", False)
+        await query.answer("✅ تم تحديث حالتك")
 
     # زر بدأت الحلقة! للمشرفين فقط
     elif query.data == "tag_all":
         if not await is_admin(update, context):
             await query.answer("❌ للمشرفين فقط", show_alert=True)
             return
-
         if group["participants"]:
-            mentions = " ".join([f"[{name}](tg://user?id={query.from_user.id})" for name in group["participants"]])
+            mentions = " ".join([f"[{p['name']}](tg://user?id={query.from_user.id})" for p in group["participants"]])
             msg = await context.bot.send_message(chat_id, f"🔔 بدأت الحلقة!\n{mentions}", parse_mode="Markdown")
             await query.answer("✅ تم تاغ الجميع مؤقتًا", show_alert=True)
-
-            # حذف الرسالة بعد 10 دقائق (600 ثانية)
+            # حذف الرسالة بعد 10 دقائق
             await asyncio.sleep(600)
             try:
                 await context.bot.delete_message(chat_id, msg.message_id)
             except:
                 pass
         else:
-            await query.answer("لا يوجد مشاركون للتاغ", show_alert=True)
+            await query.answer("لا يوجد مشاركات للتاغ", show_alert=True)
 
     # تحديث الرسالة الرئيسية بعد أي تغيير
     await query.edit_message_text(

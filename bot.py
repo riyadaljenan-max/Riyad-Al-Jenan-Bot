@@ -59,11 +59,11 @@ def build_text(group):
 def build_keyboard():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("✅ أريد دور", callback_data="join"),
+            InlineKeyboardButton("📖 أريد دور", callback_data="join"),
             InlineKeyboardButton("🎧 مستمعة", callback_data="listen"),
         ],
         [
-            InlineKeyboardButton("✔️ قرأت", callback_data="read"),
+            InlineKeyboardButton("✅ قرأت", callback_data="read"),
             InlineKeyboardButton("❌ إلغاء التسجيل", callback_data="cancel"),
         ],
         [

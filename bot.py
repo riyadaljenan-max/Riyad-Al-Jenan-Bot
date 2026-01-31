@@ -34,7 +34,7 @@ def get_group(chat_id):
         }
     return groups[chat_id]
 
-# بناء نص الرسالة مع محاذاة العناوين والعبارات الإدارية بالوسط بصريًا
+# بناء نص الرسالة
 def build_text(group):
     text = (
         "\u200f" + "               📖🌿 أكاديمية رياض الجنان 🌿📖\n"
@@ -55,15 +55,15 @@ def build_text(group):
     )
     return text
 
-# بناء لوحة الأزرار مع التعديلات
+# بناء لوحة الأزرار
 def build_keyboard():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📖 أريد دور", callback_data="join"),
+            InlineKeyboardButton("✅ أريد دور", callback_data="join"),
             InlineKeyboardButton("🎧 مستمعة", callback_data="listen"),
         ],
         [
-            InlineKeyboardButton("✅ قرأت", callback_data="read"),
+            InlineKeyboardButton("✔️ قرأت", callback_data="read"),
             InlineKeyboardButton("❌ إلغاء التسجيل", callback_data="cancel"),
         ],
         [
@@ -131,13 +131,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer("⛔️ التسجيل مغلق", show_alert=True)
         return
 
-    # تسجيل "أريد دور"
+    # تسجيل "أريد دور" (مشارك)
     if query.data == "join":
+        # لا يمكن للمشاركة أخذ دور مرتين
         if user not in group["participants"]:
             group["participants"].append(user)
         if user in group["listeners"]:
             group["listeners"].remove(user)
-        # إزالة علامة "قرأت" إذا كانت موجودة
+        # إزالة أي علامة ✅ قديمة عند إعادة التسجيل
         for i, name in enumerate(group["participants"]):
             group["participants"][i] = name.replace(" ✅", "")
 
@@ -147,19 +148,26 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             group["listeners"].append(user)
         if user in group["participants"]:
             group["participants"].remove(user)
-        # إزالة علامة "قرأت" إذا كانت موجودة
+        # إزالة أي علامة ✅ من المشاركات
         for i, name in enumerate(group["participants"]):
             group["participants"][i] = name.replace(" ✅", "")
 
     # زر "قرأت"
     elif query.data == "read":
-        if user in group["participants"]:
+        if user in group["listeners"]:
+            await query.answer("❌ لا يمكنك اختيار قرأت لأنك مستمعة", show_alert=True)
+        elif user in group["participants"]:
             idx = group["participants"].index(user)
             if not group["participants"][idx].endswith(" ✅"):
                 group["participants"][idx] += " ✅"
 
     # إلغاء التسجيل
     elif query.data == "cancel":
+        # لا يمكن لمن قرأت إزالة نفسها
+        for name in group["participants"]:
+            if name.endswith(" ✅") and name.replace(" ✅","") == user:
+                await query.answer("❌ لا يمكنك إزالة نفسك بعد أن قرأت", show_alert=True)
+                return
         if user in group["participants"]:
             group["participants"].remove(user)
         if user in group["listeners"]:

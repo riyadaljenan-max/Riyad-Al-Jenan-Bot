@@ -51,7 +51,7 @@ def ltr(text: str) -> str:
 def get_group(chat_id):
     if chat_id not in groups:
         groups[chat_id] = {
-            "participants": {},  # name: done(bool)
+            "participants": {},
             "listeners": [],
             "active": False,
             "message_id": None
@@ -83,8 +83,13 @@ def build_text(group):
     text += (
         "\n*📖 القرآن شفاء للقلوب ونور للحياة*\n"
         "*انوي الخير وابدئي، والله يوفقك 🤲🏻*\n\n"
-        "👇 يرجى اختيار حالتك من الأسفل"
     )
+
+    if group["active"]:
+        text += "👇 يرجى اختيار حالتك من الأسفل"
+    else:
+        text += "🌼 انتهت الحلقة 🌼"
+
     return text
 
 def build_keyboard():
@@ -94,7 +99,7 @@ def build_keyboard():
             InlineKeyboardButton("🎧 مستمعة", callback_data="listen"),
         ],
         [
-            InlineKeyboardButton("✅ أنهيت القراءة", callback_data="done"),
+            InlineKeyboardButton("📖 أتممت وردي اليومي", callback_data="done"),
         ],
         [
             InlineKeyboardButton("⛔️ إيقاف الإعلان", callback_data="stop"),
@@ -116,11 +121,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     group = get_group(chat_id)
 
-    if not group["active"]:
-        group["participants"].clear()
-        group["listeners"].clear()
-        group["active"] = True
-        save_state()
+    group["participants"].clear()
+    group["listeners"].clear()
+    group["active"] = True
 
     if group["message_id"]:
         try:
@@ -150,48 +153,44 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not await is_admin(update, context):
             return
         group["active"] = False
-        group["participants"].clear()
-        group["listeners"].clear()
         save_state()
-        await query.edit_message_reply_markup(None)
+        await query.edit_message_text(
+            build_text(group),
+            parse_mode="Markdown"
+        )
         return
 
     if not group["active"]:
-        await query.answer("⛔️ التسجيل مغلق حالياً")
+        await query.answer("🌼 انتهت الحلقة 🌼")
         return
 
-    # JOIN
+    # المشاركة
     if query.data == "join":
         if name in group["participants"]:
             await query.answer("أنتِ مشاركة بالفعل 🌼")
             return
         if name in group["listeners"]:
             group["listeners"].remove(name)
-
         group["participants"][name] = False
         await query.answer("🌼 نيتك طيبة، بارك الله فيكِ")
 
-    # LISTEN
+    # الاستماع
     elif query.data == "listen":
         if name in group["participants"]:
-            if group["participants"][name]:
-                await query.answer("لا يمكن تغيير الحالة بعد الانتهاء")
-            else:
-                await query.answer("أنتِ مسجلة كمشاركة")
+            await query.answer("أنتِ مسجلة كمشاركة")
             return
         if name not in group["listeners"]:
             group["listeners"].append(name)
             await query.answer("نفعكِ الله بما تسمعين 🌼")
 
-    # DONE
+    # الانتهاء
     elif query.data == "done":
         if name not in group["participants"]:
             await query.answer("لم يتم تسجيلكِ كمشاركة")
             return
         if group["participants"][name]:
-            await query.answer("تم تسجيل الانتهاء مسبقاً")
+            await query.answer("تم تسجيل الانتهاء مسبقًا")
             return
-
         group["participants"][name] = True
         await query.answer("ما شاء الله طيب الله الأنفاس 🌻")
 

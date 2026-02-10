@@ -99,7 +99,7 @@ def build_keyboard():
             InlineKeyboardButton("🎧 مستمعة", callback_data="listen"),
         ],
         [
-            InlineKeyboardButton("📖 أتممت وردي اليومي", callback_data="done"),
+            InlineKeyboardButton("✅ أنهيت القراءة", callback_data="done"),
         ],
         [
             InlineKeyboardButton("⛔️ إيقاف الإعلان", callback_data="stop"),

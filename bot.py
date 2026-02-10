@@ -95,11 +95,11 @@ def build_text(group):
 def build_keyboard():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("أود المشاركة", callback_data="join"),
+            InlineKeyboardButton("✋🏻 أود المشاركة", callback_data="join"),
             InlineKeyboardButton("🎧 مستمعة", callback_data="listen"),
         ],
         [
-            InlineKeyboardButton("📖 أتممت وردي اليومي", callback_data="done"),
+            InlineKeyboardButton("✅ انهيت القراءة ", callback_data="done"),
         ],
         [
             InlineKeyboardButton("⛔️ إيقاف الإعلان", callback_data="stop"),

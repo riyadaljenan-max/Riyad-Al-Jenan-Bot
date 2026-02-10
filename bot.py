@@ -172,7 +172,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if name in group["listeners"]:
             group["listeners"].remove(name)
         group["participants"][name] = False
-        await query.answer("🌼 نيتك طيبة، بارك الله فيكِ")
+        await query.answer("🌼 بارك الله فيكِ")
 
     # الاستماع
     elif query.data == "listen":

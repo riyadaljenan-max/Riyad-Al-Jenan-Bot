@@ -95,11 +95,11 @@ def build_text(group):
 def build_keyboard():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("✋🏻 أود المشاركة", callback_data="join"),
+            InlineKeyboardButton("أود المشاركة", callback_data="join"),
             InlineKeyboardButton("🎧 مستمعة", callback_data="listen"),
         ],
         [
-            InlineKeyboardButton("✅ أنهيت القراءة", callback_data="done"),
+            InlineKeyboardButton("📖 أتممت وردي اليومي", callback_data="done"),
         ],
         [
             InlineKeyboardButton("⛔️ إيقاف الإعلان", callback_data="stop"),
@@ -121,8 +121,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     group = get_group(chat_id)
 
-    group["participants"].clear()
-    group["listeners"].clear()
+    # فقط تفعيل الحلقة الجديدة، لا تمسح المشاركين أو المستمعين
     group["active"] = True
 
     if group["message_id"]:
@@ -153,6 +152,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not await is_admin(update, context):
             return
         group["active"] = False
+        # مسح البيانات عند الإيقاف
+        group["participants"].clear()
+        group["listeners"].clear()
+        group["message_id"] = None
         save_state()
         await query.edit_message_text(
             build_text(group),
@@ -161,7 +164,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not group["active"]:
-        await query.answer("🌼 انتهت الحلقة 🌼")
+        await query.answer("انتهت الحلقة")
         return
 
     # المشاركة
@@ -172,7 +175,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if name in group["listeners"]:
             group["listeners"].remove(name)
         group["participants"][name] = False
-        await query.answer("🌼 بارك الله فيكِ")
+        await query.answer("🌼 نيتك طيبة، بارك الله فيكِ")
 
     # الاستماع
     elif query.data == "listen":

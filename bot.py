@@ -90,7 +90,7 @@ def build_text(group):
 def build_keyboard():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("أود المشاركة", callback_data="join"),
+            InlineKeyboardButton("✋🏻 أود المشاركة", callback_data="join"),
             InlineKeyboardButton("🎧 مستمعة", callback_data="listen"),
         ],
         [

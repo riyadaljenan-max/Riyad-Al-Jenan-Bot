@@ -149,19 +149,19 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = query.from_user.full_name
 
     if query.data == "stop":
-        if not await is_admin(update, context):
-            return
-        group["active"] = False
-        # مسح البيانات عند الإيقاف
-        group["participants"].clear()
-        group["listeners"].clear()
-        group["message_id"] = None
-        save_state()
-        await query.edit_message_text(
-            build_text(group),
-            parse_mode="Markdown"
-        )
+    if not await is_admin(update, context):
         return
+
+    group["active"] = False
+    save_state()
+
+    await query.edit_message_text(
+        build_text(group),
+        reply_markup=None,
+        parse_mode="Markdown"
+    )
+    return
+
 
     if not group["active"]:
         await query.answer("انتهت الحلقة")

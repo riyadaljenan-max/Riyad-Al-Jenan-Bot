@@ -111,10 +111,12 @@ def build_keyboard():
 # /start
 # --------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        await update.message.delete()
-    except:
-        pass
+    # حذف رسالة الأمر فورًا
+    if update.message:
+        try:
+            await update.message.delete()
+        except:
+            pass
 
     if not await is_admin(update, context):
         return
@@ -127,6 +129,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     group["listeners"] = []
     group["active"] = True
 
+    # حذف الرسالة السابقة إن وجدت
     if group["message_id"]:
         try:
             await context.bot.delete_message(chat_id, group["message_id"])

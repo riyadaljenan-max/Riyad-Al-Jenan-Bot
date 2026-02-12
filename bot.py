@@ -60,7 +60,7 @@ def get_group(chat_id):
     return groups[chat_id]
 
 # --------------------------
-# UI Builders (واجهة رمضانية 🌙⭐️)
+# UI
 # --------------------------
 def build_text(group):
     text = "*🌙⭐️ أكاديمية رياض الجنان ⭐️🌙*\n"
@@ -72,14 +72,14 @@ def build_text(group):
             mark = " ✅" if done else ""
             text += f"{i}. {ltr(name)}{mark}\n"
     else:
-        text += "لا توجد مشاركات حتى الآن ⭐️\n"
+        text += "لا توجد مشاركات حتى الآن 🥺\n"
 
     text += "\n*⭐️ المستمعات:*\n"
     if group["listeners"]:
         for i, name in enumerate(group["listeners"], start=1):
             text += f"{i}. {ltr(name)}\n"
     else:
-        text += "لا توجد مستمعات حتى الآن ⭐️\n"
+        text += "لا توجد مستمعات حتى الآن 🎧\n"
 
     text += (
         "\n*📖 قال تعالى: \"شهر رمضان الذي أُنزل فيه القرآن\"*\n"
@@ -109,9 +109,10 @@ def build_keyboard():
     ])
 
 # --------------------------
-# /start
+# /start (المنطق الصحيح)
 # --------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     if update.message:
         try:
             await update.message.delete()
@@ -124,17 +125,31 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = str(update.effective_chat.id)
     group = get_group(chat_id)
 
-    # بدء جلسة جديدة نظيفة
+    # 🔵 إذا الجلسة نشطة → حذف الرسالة القديمة وإعادة إرسالها بنفس الأسماء
+    if group["active"]:
+
+        if group["message_id"]:
+            try:
+                await context.bot.delete_message(chat_id, group["message_id"])
+            except:
+                pass
+
+        msg = await context.bot.send_message(
+            chat_id=chat_id,
+            text=build_text(group),
+            reply_markup=build_keyboard(),
+            parse_mode="Markdown"
+        )
+
+        group["message_id"] = msg.message_id
+        save_state()
+        return
+
+    # 🔴 إذا الجلسة موقوفة → لا نحذف الرسالة القديمة، نبدأ جلسة جديدة نظيفة
+
     group["participants"] = {}
     group["listeners"] = []
     group["active"] = True
-
-    # حذف الرسالة السابقة إن وجدت
-    if group["message_id"]:
-        try:
-            await context.bot.delete_message(chat_id, group["message_id"])
-        except:
-            pass
 
     msg = await context.bot.send_message(
         chat_id=chat_id,
@@ -184,7 +199,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             group["listeners"].remove(name)
 
         group["participants"][name] = False
-        await query.answer("⭐️ نيتك طيبة، تقبل الله منكِ")
+        await query.answer("⭐️ نيتك طيبة")
 
     elif query.data == "listen":
         if name in group["participants"]:

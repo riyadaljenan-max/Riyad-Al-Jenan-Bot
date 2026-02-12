@@ -60,36 +60,37 @@ def get_group(chat_id):
     return groups[chat_id]
 
 # --------------------------
-# UI Builders
+# UI Builders (واجهة رمضانية 🌙⭐️)
 # --------------------------
 def build_text(group):
-    text = "*🌼 أكاديمية رياض الجنان 🌼*\n"
-    text += "*بإدارة نجلاء درابسة*\n\n"
+    text = "*🌙⭐️ أكاديمية رياض الجنان ⭐️🌙*\n"
+    text += "*⭐️ بإدارة نجلاء درابسة ⭐️*\n\n"
 
-    text += "*🌼 المشاركات:*\n"
+    text += "*⭐️ المشاركات في الحلقة:*\n"
     if group["participants"]:
         for i, (name, done) in enumerate(group["participants"].items(), start=1):
             mark = " ✅" if done else ""
             text += f"{i}. {ltr(name)}{mark}\n"
     else:
-        text += "لا توجد مشاركات حتى الآن\n"
+        text += "لا توجد مشاركات حتى الآن ⭐️\n"
 
-    text += "\n*🌼 المستمعات:*\n"
+    text += "\n*⭐️ المستمعات:*\n"
     if group["listeners"]:
         for i, name in enumerate(group["listeners"], start=1):
             text += f"{i}. {ltr(name)}\n"
     else:
-        text += "لا توجد مستمعات حتى الآن\n"
+        text += "لا توجد مستمعات حتى الآن ⭐️\n"
 
     text += (
-        "\n*📖 القرآن شفاء للقلوب ونور للحياة*\n"
-        "*انوي الخير وابدئي، والله يوفقك 🤲🏻*\n\n"
+        "\n*📖 قال تعالى: \"شهر رمضان الذي أُنزل فيه القرآن\"*\n"
+        "*🌙 اجعلي لكِ وردًا من كتاب الله في هذا الشهر المبارك ⭐️*\n"
+        "*اللهم اجعل القرآن ربيع قلوبنا ونور صدورنا 🤲🏻*\n\n"
     )
 
     if group["active"]:
-        text += "👇 يرجى اختيار حالتك من الأسفل"
+        text += "👇 اختاري حالتك من الأزرار بالأسفل"
     else:
-        text += "🌼 انتهت الحلقة 🌼"
+        text += "🌙⭐️ انتهت الحلقة الرمضانية ⭐️🌙"
 
     return text
 
@@ -100,7 +101,7 @@ def build_keyboard():
             InlineKeyboardButton("🎧 مستمعة", callback_data="listen"),
         ],
         [
-            InlineKeyboardButton("✅ انهيت القراءة", callback_data="done"),
+            InlineKeyboardButton("✅ أنهيت القراءة", callback_data="done"),
         ],
         [
             InlineKeyboardButton("⛔️ إيقاف الإعلان", callback_data="stop"),
@@ -111,7 +112,6 @@ def build_keyboard():
 # /start
 # --------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # حذف رسالة الأمر فورًا
     if update.message:
         try:
             await update.message.delete()
@@ -157,7 +157,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     group = get_group(chat_id)
     name = query.from_user.full_name
 
-    # إيقاف الإعلان (لا نحذف الأسماء)
     if query.data == "stop":
         if not await is_admin(update, context):
             return
@@ -173,22 +172,20 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not group["active"]:
-        await query.answer("انتهت الحلقة")
+        await query.answer("🌙 انتهت الحلقة")
         return
 
-    # المشاركة
     if query.data == "join":
         if name in group["participants"]:
-            await query.answer("أنتِ مشاركة بالفعل 🌼")
+            await query.answer("أنتِ مشاركة بالفعل 🌙")
             return
 
         if name in group["listeners"]:
             group["listeners"].remove(name)
 
         group["participants"][name] = False
-        await query.answer("🌼 نيتك طيبة، بارك الله فيكِ")
+        await query.answer("⭐️ نيتك طيبة، تقبل الله منكِ")
 
-    # الاستماع
     elif query.data == "listen":
         if name in group["participants"]:
             await query.answer("أنتِ مسجلة كمشاركة")
@@ -196,9 +193,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if name not in group["listeners"]:
             group["listeners"].append(name)
-            await query.answer("نفعكِ الله بما تسمعين 🌼")
+            await query.answer("🌙 نفعكِ الله بالقرآن")
 
-    # الانتهاء
     elif query.data == "done":
         if name not in group["participants"]:
             await query.answer("لم يتم تسجيلكِ كمشاركة")
@@ -209,7 +205,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         group["participants"][name] = True
-        await query.answer("ما شاء الله طيب الله الأنفاس 🌻")
+        await query.answer("⭐️ ما شاء الله، بارك الله فيكِ")
 
     save_state()
 

@@ -49,6 +49,7 @@ def ltr(text: str) -> str:
     return "\u200e" + text
 
 def get_group(chat_id):
+    chat_id = str(chat_id)
     if chat_id not in groups:
         groups[chat_id] = {
             "participants": {},
@@ -99,7 +100,7 @@ def build_keyboard():
             InlineKeyboardButton("🎧 مستمعة", callback_data="listen"),
         ],
         [
-            InlineKeyboardButton("✅ انهيت القراءة ", callback_data="done"),
+            InlineKeyboardButton("✅ انهيت القراءة", callback_data="done"),
         ],
         [
             InlineKeyboardButton("⛔️ إيقاف الإعلان", callback_data="stop"),
@@ -118,10 +119,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update, context):
         return
 
-    chat_id = update.effective_chat.id
+    chat_id = str(update.effective_chat.id)
     group = get_group(chat_id)
 
-    # فقط تفعيل الحلقة الجديدة، لا تمسح المشاركين أو المستمعين
+    # بدء جلسة جديدة نظيفة
+    group["participants"] = {}
+    group["listeners"] = []
     group["active"] = True
 
     if group["message_id"]:
@@ -136,6 +139,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=build_keyboard(),
         parse_mode="Markdown"
     )
+
     group["message_id"] = msg.message_id
     save_state()
 
@@ -144,24 +148,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --------------------------
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    chat_id = query.message.chat.id
+    await query.answer()
+
+    chat_id = str(query.message.chat.id)
     group = get_group(chat_id)
     name = query.from_user.full_name
 
+    # إيقاف الإعلان (لا نحذف الأسماء)
     if query.data == "stop":
-    if not await is_admin(update, context):
+        if not await is_admin(update, context):
+            return
+
+        group["active"] = False
+        save_state()
+
+        await query.edit_message_text(
+            build_text(group),
+            reply_markup=None,
+            parse_mode="Markdown"
+        )
         return
-
-    group["active"] = False
-    save_state()
-
-    await query.edit_message_text(
-        build_text(group),
-        reply_markup=None,
-        parse_mode="Markdown"
-    )
-    return
-
 
     if not group["active"]:
         await query.answer("انتهت الحلقة")
@@ -172,8 +178,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if name in group["participants"]:
             await query.answer("أنتِ مشاركة بالفعل 🌼")
             return
+
         if name in group["listeners"]:
             group["listeners"].remove(name)
+
         group["participants"][name] = False
         await query.answer("🌼 نيتك طيبة، بارك الله فيكِ")
 
@@ -182,6 +190,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if name in group["participants"]:
             await query.answer("أنتِ مسجلة كمشاركة")
             return
+
         if name not in group["listeners"]:
             group["listeners"].append(name)
             await query.answer("نفعكِ الله بما تسمعين 🌼")
@@ -191,13 +200,16 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if name not in group["participants"]:
             await query.answer("لم يتم تسجيلكِ كمشاركة")
             return
+
         if group["participants"][name]:
             await query.answer("تم تسجيل الانتهاء مسبقًا")
             return
+
         group["participants"][name] = True
         await query.answer("ما شاء الله طيب الله الأنفاس 🌻")
 
     save_state()
+
     await query.edit_message_text(
         build_text(group),
         reply_markup=build_keyboard(),
@@ -210,9 +222,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     load_state()
     threading.Thread(target=run_server, daemon=True).start()
+
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button))
+
     app.run_polling()
 
 if __name__ == "__main__":

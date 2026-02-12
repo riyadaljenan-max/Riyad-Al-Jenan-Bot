@@ -45,8 +45,9 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admins = await context.bot.get_chat_administrators(update.effective_chat.id)
     return any(a.user.id == user_id for a in admins)
 
-def ltr(text: str) -> str:
-    return "\u200e" + text
+# 🔹 نجبر الاسم يكون بمحاذاة اليمين دائمًا
+def rtl(text: str) -> str:
+    return "\u200f" + text
 
 def get_group(chat_id):
     chat_id = str(chat_id)
@@ -70,19 +71,19 @@ def build_text(group):
     if group["participants"]:
         for i, (name, done) in enumerate(group["participants"].items(), start=1):
             mark = " ✅" if done else ""
-            text += f"{i}. {ltr(name)}{mark}\n"
+            text += f"{i}. {rtl(name)}{mark}\n"
     else:
-        text += "لا توجد مشاركات حتى الآن 🥺\n"
+        text += "لا توجد مشاركات حتى الآن 😔\n"
 
     text += "\n*⭐️ المستمعات:*\n"
     if group["listeners"]:
         for i, name in enumerate(group["listeners"], start=1):
-            text += f"{i}. {ltr(name)}\n"
+            text += f"{i}. {rtl(name)}\n"
     else:
         text += "لا توجد مستمعات حتى الآن 🎧\n"
 
     text += (
-        "\n*📖 قال تعالى: \"شهر رمضان الذي أُنزل فيه القرآن\"*\n"
+        "\n*📖 قال تعالى: \"شَهْرُ رَمَضانَ الَّذِي أُنْزِلَ فِيهِ الْقُرْآنُ\"*\n"
         "*🌙 اجعلي لكِ وردًا من كتاب الله في هذا الشهر المبارك ⭐️*\n"
         "*اللهم اجعل القرآن ربيع قلوبنا ونور صدورنا 🤲🏻*\n\n"
     )
@@ -109,7 +110,7 @@ def build_keyboard():
     ])
 
 # --------------------------
-# /start (المنطق الصحيح)
+# /start
 # --------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -199,7 +200,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             group["listeners"].remove(name)
 
         group["participants"][name] = False
-        await query.answer("⭐️ نيتك طيبة")
+        await query.answer("⭐️ نيتك طيبة، ربي يبارك فيكِ")
 
     elif query.data == "listen":
         if name in group["participants"]:
